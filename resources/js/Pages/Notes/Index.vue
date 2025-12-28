@@ -1,8 +1,10 @@
 <script setup>
+
 import { ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
-import Sidebar from '@/Components/Sidebar.vue'
+import MainLayout from '@/Components/Layouts/MainLayout.vue'
 import Modal from '@/Components/Modal.vue'
+import Swal from 'sweetalert2'
 
 defineProps({ notes: Array, subjects: Array })
 
@@ -25,6 +27,17 @@ const submit = () => {
   form.post('/notes', { onSuccess: resetForm })
 }
 
+// Warna card (copy dari Subjects)
+const colors = [
+  'bg-gradient-to-br from-yellow-200 to-yellow-300',
+  'bg-gradient-to-br from-orange-200 to-orange-300',
+  'bg-gradient-to-br from-green-200 to-green-300',
+  'bg-gradient-to-br from-purple-200 to-purple-300',
+  'bg-gradient-to-br from-blue-200 to-blue-300',
+  'bg-gradient-to-br from-pink-200 to-pink-300',
+]
+const getColor = (id) => colors[id % colors.length]
+
 /* Edit Catatan */
 const openEdit = (note) => {
   isEdit.value = true
@@ -39,11 +52,53 @@ const update = () => {
   form.put(`/notes/${selectedId.value}`, { onSuccess: resetForm })
 }
 
-/* Hapus Catatan */
 const destroy = (id) => {
-  if (confirm('Yakin ingin menghapus catatan ini?')) {
-    form.delete(`/notes/${id}`)
-  }
+  Swal.fire({
+    title: 'Hapus catatan?',
+    text: 'Catatan yang dihapus tidak dapat dikembalikan.',
+    icon: 'warning',
+
+    // ✅ RESPONSIVE SIZE
+    width: window.innerWidth < 640 ? '90%' : 340,
+    padding: '1.25rem',
+
+    iconColor: '#f97316',
+
+    showCancelButton: true,
+    confirmButtonText: 'Ya, hapus',
+    cancelButtonText: 'Batal',
+    reverseButtons: true,
+    buttonsStyling: false,
+
+    // ✅ CUSTOM CLASS UNTUK UKURAN
+    customClass: {
+      popup: 'rounded-xl shadow-lg',
+      icon: 'swal-small-icon',
+      title: 'text-base font-semibold text-zinc-800',
+      htmlContainer: 'text-sm text-zinc-500',
+      actions: 'mt-3',
+      confirmButton:
+        'px-3 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 m-2',
+      cancelButton:
+        'px-3 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-600 hover:bg-zinc-100 ml-2',
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      form.delete(`/notes/${id}`, {
+        onSuccess: () => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Dihapus',
+            text: 'Catatan berhasil dihapus',
+            width: 300,
+            padding: '1rem',
+            timer: 1200,
+            showConfirmButton: false,
+          })
+        }
+      })
+    }
+  })
 }
 
 /* Reset form */
@@ -56,77 +111,114 @@ const resetForm = () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-gray-100">
-    <!-- Sidebar -->
-    <Sidebar :show="sidebarOpen" @close="sidebarOpen=false" />
-
-    <!-- Hamburger -->
-    <button
-      class="fixed top-4 left-4 z-50 md:hidden bg-white shadow p-2 rounded-full text-2xl"
-      @click="sidebarOpen=true"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-7 h-7">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
-
-    <!-- Konten utama -->
-    <div class="flex-1 p-6">
+  <MainLayout>
+    <div class="p-6">
       <div class="flex justify-between mb-6">
         <h1 class="text-2xl font-bold">Catatan Belajar</h1>
-        <button @click="openModal=true" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">
-          + Catatan
-        </button>
       </div>
 
       <!-- Cards -->
       <div class="grid md:grid-cols-3 gap-6">
-        <div v-for="note in notes" :key="note.id" class="bg-white p-5 rounded-xl shadow">
+        <!-- Tambah -->
+        <!-- ➕ CARD TAMBAH CATATAN (URUTAN PERTAMA) -->
+        <div @click="openModal = true" class="bg-white border-2 border-dashed border-indigo-300 p-5 rounded-xl shadow-sm
+           cursor-pointer hover:shadow-md hover:-translate-y-1
+           transition-all flex flex-col items-center justify-center text-center group">
+          <i class="ph ph-plus-circle text-4xl text-indigo-500 group-hover:scale-110 transition"></i>
+          <p class="mt-2 font-semibold text-indigo-600">
+            Tambah Catatan
+          </p>
+          <p class="text-sm text-zinc-400">
+            Klik untuk membuat catatan baru
+          </p>
+        </div>
+
+        <!-- Catatan -->
+        <div v-for="note in notes" :key="note.id" @click="openEdit(note)"
+          :class="[getColor(note.id), 'p-5 rounded-xl shadow cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all group']">
           <div class="flex justify-between items-start">
+            <!-- Content -->
             <div>
-              <h3 class="font-semibold">{{ note.title }}</h3>
+              <h3 class="font-bold text-lg text-zinc-950 group-hover:text-indigo-700 transition">
+                {{ note.title }}
+              </h3>
               <p class="text-sm text-gray-500">{{ note.subject.name }}</p>
-              <p class="mt-2 text-gray-700 line-clamp-3">{{ note.content }}</p>
+              <p class="mt-2 text-gray-600 line-clamp-3">
+                {{ note.content }}
+              </p>
             </div>
-            <div class="flex gap-2">
-              <button @click="openEdit(note)" title="Edit">✏️</button>
-              <button @click="destroy(note.id)" title="Hapus">🗑</button>
-            </div>
+
+            <!-- Delete -->
+            <button @click.stop="destroy(note.id)" title="Hapus" class="text-red-500 hover:text-red-700 transition">
+              <i class="ph-bold ph-trash text-lg"></i>
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Modal Tambah/Edit -->
       <Modal :show="openModal" @close="resetForm">
-        <h2 class="font-semibold mb-3">{{ isEdit ? 'Edit Catatan' : 'Tambah Catatan' }}</h2>
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full">
 
-        <input v-model="form.title" placeholder="Judul" class="w-full border rounded p-2 mb-2" />
+          <!-- Header -->
+          <div class="flex items-center gap-3 mb-6">
+            <i :class="isEdit ? 'ph-bold ph-pen' : 'ph ph-plus-circle'" class="text-indigo-600 text-xl"></i>
 
-        <select v-model="form.subject_id" class="w-full border rounded p-2 mb-2">
-          <option value="">Pilih Pelajaran</option>
-          <option v-for="s in subjects" :value="s.id">{{ s.name }}</option>
-        </select>
+            <h2 class="text-xl font-extrabold text-zinc-800">
+              {{ isEdit ? 'Edit Catatan' : 'Catatan Baru' }}
+            </h2>
+          </div>
 
-        <textarea v-model="form.content" class="w-full border rounded p-2 mb-3" rows="4"></textarea>
+          <!-- Judul (Heading Style) -->
+          <input v-model="form.title" placeholder="Judul catatan..." class="w-full text-2xl font-bold text-zinc-900
+             placeholder-zinc-400
+             border-none outline-none
+             focus:ring-0 mb-4" />
 
-        <div class="flex justify-end gap-2">
-          <button @click="resetForm" class="px-4 py-2 rounded-lg border">Batal</button>
-          <button
-            v-if="isEdit"
-            @click="update"
-            class="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-          >
-            Update
-          </button>
-          <button
-            v-else
-            @click="submit"
-            class="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-          >
-            Simpan
-          </button>
+          <!-- Meta -->
+          <div class="flex items-center gap-3 mb-6">
+            <select v-model="form.subject_id" class="text-sm font-medium text-indigo-600
+               bg-indigo-50 px-3 py-1.5 rounded-full
+               border-none outline-none cursor-pointer">
+              <option value="">Pilih pelajaran</option>
+              <option v-for="s in subjects" :key="s.id" :value="s.id">
+                {{ s.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Divider -->
+          <hr class="mb-6" />
+
+          <!-- Isi Catatan (Article Style) -->
+          <textarea v-model="form.content" rows="8" placeholder="Mulai menulis catatan di sini..." class="w-full text-zinc-700 leading-relaxed text-base
+             placeholder-zinc-400
+             border-none outline-none resize-none
+             focus:ring-0"></textarea>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 mt-8">
+            <button @click="resetForm" class="px-4 py-2 rounded-lg text-sm
+               text-zinc-600 hover:bg-zinc-100 transition">
+              Batal
+            </button>
+
+            <button v-if="isEdit" @click="update" class="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm
+               hover:bg-indigo-700 transition flex items-center gap-1">
+              <i class="ph ph-check"></i>
+              Update
+            </button>
+
+            <button v-else @click="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm
+               hover:bg-indigo-700 transition flex items-center gap-1">
+              <i class="ph ph-floppy-disk"></i>
+              Simpan
+            </button>
+          </div>
+
         </div>
       </Modal>
+
     </div>
-  </div>
+  </MainLayout>
 </template>

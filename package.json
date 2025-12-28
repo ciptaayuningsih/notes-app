@@ -19,8 +19,10 @@
     },
     "dependencies": {
         "@headlessui/vue": "^1.7.23",
+        "@phosphor-icons/vue": "^2.2.1",
         "build": "^0.1.4",
         "npm": "^11.7.0",
-        "run": "^1.5.0"
+        "run": "^1.5.0",
+        "sweetalert2": "^11.26.17"
     }
 }

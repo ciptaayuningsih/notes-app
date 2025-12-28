@@ -39,8 +39,12 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject)
     {
-        $subject->delete();
+        // Prevent deletion if subject has notes
+        if ($subject->notes()->count() > 0) {
+            return back()->withErrors(['subject' => 'Tidak dapat menghapus mata pelajaran yang memiliki catatan.']);
+        }
 
+        $subject->delete();
         return back();
     }
 }
